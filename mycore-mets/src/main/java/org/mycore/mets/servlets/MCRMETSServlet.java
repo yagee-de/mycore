@@ -141,7 +141,9 @@ public class MCRMETSServlet extends MCRServlet {
             if (!metsExists && STORE_METS_ON_GENERATE) {
                 MCRMetsSave.saveMets(mets, MCRObjectID.getInstance(derivate));
             }
-            return new MCRJDOMContent(mets);
+            final MCRJDOMContent mcrjdomContent = new MCRJDOMContent(mets);
+            mcrjdomContent.setName(derivate + ":/mets.xml");
+            return mcrjdomContent;
         }
     }
 
