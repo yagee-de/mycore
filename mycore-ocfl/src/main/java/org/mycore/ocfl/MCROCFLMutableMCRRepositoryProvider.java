@@ -20,38 +20,22 @@ package org.mycore.ocfl;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import javax.inject.Singleton;
 
 import org.mycore.common.config.annotation.MCRPostConstruction;
-import org.mycore.common.config.annotation.MCRProperty;
+import org.mycore.ocfl.layout.MCRStorageLayoutExtension;
 
-import edu.wisc.library.ocfl.api.OcflRepository;
 import edu.wisc.library.ocfl.core.OcflRepositoryBuilder;
-import edu.wisc.library.ocfl.core.extension.OcflExtensionConfig;
-import edu.wisc.library.ocfl.core.extension.storage.layout.config.HashedNTupleIdEncapsulationLayoutConfig;
+import edu.wisc.library.ocfl.core.extension.OcflExtensionRegistry;
 
 /**
- * Simple way to provide a {@link OcflRepository}
+ * @author Tobias Lenhardt [Hammer1279]
  */
-@Singleton
-public class MCROCFLHashRepositoryProvider extends MCROCFLRepositoryProvider {
-
-    protected Path repositoryRoot;
-
-    protected Path workDir;
-
-    protected OcflRepository repository;
-
+public class MCROCFLMutableMCRRepositoryProvider extends MCROCFLMCRRepositoryProvider {
+    
     @Override
-    public OcflRepository getRepository() {
-        return repository;
-    }
-
     @MCRPostConstruction
     public void init(String prop) throws IOException {
+        OcflExtensionRegistry.register(MCRStorageLayoutExtension.EXTENSION_NAME, MCRStorageLayoutExtension.class);
         if(Files.notExists(workDir)){
             Files.createDirectories(workDir);
         }
@@ -59,32 +43,9 @@ public class MCROCFLHashRepositoryProvider extends MCROCFLRepositoryProvider {
             Files.createDirectories(repositoryRoot);
         }
         this.repository = new OcflRepositoryBuilder()
+            .prettyPrintJson()
             .defaultLayoutConfig(getExtensionConfig())
             .storage(storage -> storage.fileSystem(repositoryRoot))
-            .workDir(workDir).build();
-    }
-
-    public OcflExtensionConfig getExtensionConfig() {
-        return new HashedNTupleIdEncapsulationLayoutConfig();
-    }
-
-    public Path getRepositoryRoot() {
-        return repositoryRoot;
-    }
-
-    public Path getWorkDir() {
-        return workDir;
-    }
-
-    @MCRProperty(name ="RepositoryRoot")
-    public MCROCFLHashRepositoryProvider setRepositoryRoot(String repositoryRoot) {
-        this.repositoryRoot = Paths.get(repositoryRoot);
-        return this;
-    }
-
-    @MCRProperty(name = "WorkDir")
-    public MCROCFLHashRepositoryProvider setWorkDir(String workDir) {
-        this.workDir = Paths.get(workDir);
-        return this;
+            .workDir(workDir).buildMutable();
     }
 }
