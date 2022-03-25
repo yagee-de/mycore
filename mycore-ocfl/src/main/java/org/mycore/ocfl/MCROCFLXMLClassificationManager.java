@@ -69,9 +69,6 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
 
     private String rootFolder = INC_CLSDIR ? "classification/" : "";
 
-    // private final String repositoryKey = MCRConfiguration2.getString("MCR.Classification.Manager.Repository")
-    //     .orElse("Default");
-
     @MCRProperty(name = "Repository", required = true)
     public String repositoryKey;
 
@@ -93,19 +90,8 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
         return (MutableOcflRepository) MCROCFLRepositoryProvider.getRepository(repositoryKey);
     }
 
-    // public void fileUpdate(MCRCategoryID mcrid, MCRCategory mcrCg, MCRContent xml, MCREvent eventData) {
-    //     fileUpdate(mcrid, mcrCg, xml, xml, eventData);
-    // }
-
     public void fileUpdate(MCRCategoryID mcrid, MCRCategory mcrCg, MCRContent clXml, MCRContent cgXml,
         MCREvent eventData) {
-
-        // try {
-        //     LOGGER.debug("\n\n{}\n\n{}\n\n", clXml.asString(), cgXml.asString());
-        // } catch (IOException e2) {
-        //     // TODO Auto-generated catch block
-        //     e2.printStackTrace();
-        // }
 
         String objName = getName(mcrid);
         String message = eventData.getEventType();
@@ -120,7 +106,6 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
         try (InputStream objectAsStream = xml.getInputStream()) {
             VersionInfo versionInfo = buildVersionInfo(message, lastModified);
             getRepository().stageChanges(ObjectVersionId.head(objName), versionInfo, updater -> {
-                // getRepository().updateObject(ObjectVersionId.head(objName), versionInfo, updater -> {
                 updater.writeFile(objectAsStream, buildFilePath(mcrCg), OcflOption.OVERWRITE);
             });
         } catch (IOException e) {
@@ -128,10 +113,6 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
         }
 
     }
-
-    // public void fileDelete(MCRCategoryID mcrid, MCRCategory mcrCg, MCRContent xml, MCREvent eventData) {
-    //     fileDelete(mcrid, mcrCg, xml, xml, eventData);
-    // }
 
     public void fileDelete(MCRCategoryID mcrid, MCRCategory mcrCg, MCRContent clXml, MCRContent cgXml,
         MCREvent eventData) {
@@ -145,7 +126,6 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
         }
         VersionInfo versionInfo = buildVersionInfo(message, lastModified);
         getRepository().stageChanges(ObjectVersionId.head(objName), versionInfo, updater -> {
-            // getRepository().updateObject(ObjectVersionId.head(objName), versionInfo, updater -> {
             updater.removeFile(buildFilePath(mcrCg));
         });
     }
@@ -161,13 +141,19 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
         MCRCategoryID mcrid = (MCRCategoryID) data.get("mid");
         MCRCategory mcrCg = (MCRCategory) data.get("ctg");
         MCRContent rtXml = (MCRContent) data.get("rtx"); // class
-        // MCRContent cgXml = (MCRContent) data.get("cgx"); // categ
         MCREvent event = (MCREvent) evt.get("event");
+        if (event == null) {
+            event = evt;
+        }
         if (mcrCg.isCategory()) {
             fileUpdate(mcrCg.getRoot().getId(), mcrCg.getRoot(), rtXml, evt);
         }
         VersionInfo versionInfo = buildVersionInfo(event.getEventType(), lastModified);
         getRepository().commitStagedChanges(getName(mcrid), versionInfo);
+    }
+
+    public void dropChanges(MCREvent evt) {
+        dropChanges(evt, MCROCFLEventHandler.getEventData(evt));
     }
 
     public void dropChanges(MCREvent evt, Map<String, Object> data) {
@@ -188,12 +174,7 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
     public void undoAction(Map<String, Object> data, MCREvent evt) {
         if (!Objects.equals(evt.getEventType(), MCRClassEvent.COMMIT_EVENT)) {
             dropChanges(evt, data);
-        } /*  else {
-             // MCRCategoryID mcrid = (MCRCategoryID) data.get("mid");
-             // MCRCategory mcrCg = (MCRCategory) data.get("ctg");
-             // MCRContent cgXml = (MCRContent) data.get("xml");
-             // undoAction(mcrid, mcrCg, cgXml, evt);
-          } */
+        }
     }
 
     /**
@@ -243,30 +224,6 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
         } catch (JDOMException | SAXException | IOException e) {
             throw new MCRPersistenceException("Can not parse XML from OCFL-Store", e);
         }
-
-        // MCRJDOMContent content = null;
-
-        // for (OcflObjectVersionFile file : repo.getObject(vId).getFiles()) {
-        //     LOGGER.debug("\n\n{}\n{}\nMatch? {}-{}\n",
-        //      objName, file.getPath(), file.getPath().matches(objName + '$'),
-        //         file.getPath().matches(".+" + objName + '$'));
-        //     if (file.getPath().matches(".+" + objName + '$')) {
-        //         try (InputStream fileContentStream = file.getStream()) {
-        //             Document xml = new MCRStreamContent(fileContentStream).asXML();
-        //             if (revision != null) {
-        //                 xml.getRootElement().setAttribute("rev", revision);
-        //             }
-        //             content = new MCRJDOMContent(xml);
-        //         } catch (JDOMException | SAXException | IOException e) {
-        //             throw new MCRPersistenceException("Can not parse XML from OCFL-Store", e);
-        //         }
-        //     }
-        // }
-        // if (content != null) {
-        //     return content;
-        // } else {
-        //     throw new MCRPersistenceException("Can not parse XML from OCFL-Store");
-        // }
     }
 
     protected String getName(MCRCategoryID mcrid) {
@@ -303,7 +260,7 @@ public class MCROCFLXMLClassificationManager implements MCRXMLClassificationMana
                 builder.append(list.get(i));
             }
         } else {
-            throw new MCRException("The MCRClass is of Invalid Type, it must be either Class or Category");
+            throw new MCRException("The MCRClass is of Invalid Type, it must be either a Class or Category");
         }
         return builder.toString();
     }

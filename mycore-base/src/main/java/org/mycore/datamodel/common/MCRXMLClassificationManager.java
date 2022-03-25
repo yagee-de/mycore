@@ -18,9 +18,11 @@
 
 package org.mycore.datamodel.common;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Map;
 
+import org.mycore.common.MCRSession;
 import org.mycore.common.content.MCRContent;
 import org.mycore.common.events.MCREvent;
 import org.mycore.datamodel.classifications2.MCRCategory;
@@ -49,7 +51,29 @@ public interface MCRXMLClassificationManager {
     void fileMove(MCRCategoryID mcrid, MCRCategory mcrCg, MCRContent clXml, MCRContent cgXml,
         MCREvent eventData);
 
+    @SuppressWarnings("unchecked")
+    default void commitSession(MCRSession session) {
+        ArrayList<MCREvent> list = (ArrayList<MCREvent>)session.get("classQueue");
+        list.forEach(event -> {
+            commitChanges(event, new Date());
+        });
+        session.deleteObject("classQueue");
+    }
+    
     void commitChanges(MCREvent evt, Date lastModified);
+
+    @SuppressWarnings("unchecked")
+    default void rollbackSession(MCRSession session) {
+        ArrayList<MCREvent> list = (ArrayList<MCREvent>)session.get("classQueue");
+        list.forEach(event -> {
+            dropChanges(event);
+        });
+        session.deleteObject("classQueue");
+    }
+
+    void dropChanges(MCREvent evt);
+
+    void dropChanges(MCREvent evt, Map<String, Object> data);
 
     void undoAction(Map<String, Object> data, MCREvent evt);
 
@@ -63,7 +87,7 @@ public interface MCRXMLClassificationManager {
      * @deprecated use {@link #undoAction(Map, MCREvent)} with
      * {@link MCROCFLEventHandler#getEventData(MCREvent, boolean)}
      */
-    @Deprecated(forRemoval = false)
+    @Deprecated(forRemoval = true)
     Boolean undoAction(MCRCategoryID mcrId, MCRCategory mcrCg, MCRContent xml, MCREvent eventData);
 
     /**

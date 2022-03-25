@@ -18,9 +18,17 @@
 
 package org.mycore.ocfl;
 
+import java.util.ArrayList;
+import java.util.Optional;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mycore.common.MCRPersistenceTransaction;
+import org.mycore.common.MCRSession;
+import org.mycore.common.MCRSessionMgr;
+import org.mycore.common.config.MCRConfiguration2;
+import org.mycore.common.events.MCREvent;
+import org.mycore.datamodel.common.MCRXMLClassificationManager;
 
 /**
  * @author Tobias Lenhardt [Hammer1279]
@@ -29,13 +37,14 @@ public class MCROCFLPersistenceTransaction implements MCRPersistenceTransaction 
 
     private static final Logger LOGGER = LogManager.getLogger(MCROCFLPersistenceTransaction.class);
 
-    // protected final MCRSession currentSession = MCRSessionMgr.getCurrentSession();
+    protected MCRSession currentSession;
     
-    // protected MCRXMLClassificationManager manager = MCRConfiguration2
-    //     .getSingleInstanceOf("MCR.Classification.Manager", MCRXMLClassificationManager.class)
-    //     .orElse(new MCROCFLXMLClassificationManager());
+    protected Optional<MCRXMLClassificationManager> managerOpt = MCRConfiguration2
+    .<MCRXMLClassificationManager>getSingleInstanceOf("MCR.Classification.Manager");
 
-    private boolean active = false;
+    // private boolean active = false;
+
+    private boolean rollbackOnly = false;
 
     /**
      * {@inheritDoc}
@@ -43,8 +52,8 @@ public class MCROCFLPersistenceTransaction implements MCRPersistenceTransaction 
     @Override
     public boolean isReady() {
         // TODO Auto-generated method stub
-        LOGGER.debug("TRANSACTION READY CHECK");
-        return true;
+        LOGGER.debug("TRANSACTION READY CHECK - {}", managerOpt.isPresent());
+        return managerOpt.isPresent();
     }
 
     /**
@@ -54,8 +63,10 @@ public class MCROCFLPersistenceTransaction implements MCRPersistenceTransaction 
     public void begin() {
         // TODO Auto-generated method stub
         LOGGER.debug("TRANSACTION BEGIN");
-        if(active){throw new IllegalStateException("TRANSACTION BEGIN");}
-        active=true;
+        if(isActive()){throw new IllegalStateException("TRANSACTION BEGIN");}
+        currentSession = MCRSessionMgr.getCurrentSession();
+        currentSession.put("classQueue", new ArrayList<MCREvent>());
+        // active=true;
     }
     
     /**
@@ -64,20 +75,30 @@ public class MCROCFLPersistenceTransaction implements MCRPersistenceTransaction 
     @Override
     public void commit() {
         // TODO Auto-generated method stub
+        // read from current session what was modified to then call classmanager.commit on it
         LOGGER.debug("TRANSACTION COMMIT");
-        if(!active){throw new IllegalStateException("TRANSACTION COMMIT");}
-        active=false;
+        if(!isActive()||getRollbackOnly()){throw new IllegalStateException("TRANSACTION COMMIT");}
+        try {
+            managerOpt.get().commitSession(currentSession);
+        } catch (Exception e) {
+            rollbackOnly = true;
+            throw e;
+        }
+        // active=false;
     }
-
+    
     /**
      * {@inheritDoc}
      */
     @Override
     public void rollback() {
         // TODO Auto-generated method stub
+        // read from current session what was modified to then call classmanager.rollback on it
         LOGGER.debug("TRANSACTION ROLLBACK");
-        if(!active){throw new IllegalStateException("TRANSACTION ROLLBACK");}
-        active=false;
+        if(!isActive()){throw new IllegalStateException("TRANSACTION ROLLBACK");}
+        managerOpt.get().rollbackSession(currentSession);
+        rollbackOnly = false;
+        // active=false;
     }
 
     /**
@@ -86,9 +107,9 @@ public class MCROCFLPersistenceTransaction implements MCRPersistenceTransaction 
     @Override
     public boolean getRollbackOnly() {
         // TODO Auto-generated method stub
-        LOGGER.debug("TRANSACTION ROLLBACK CHECK");
-        if(!active){throw new IllegalStateException("TRANSACTION ROLLBACK CHECK");}
-        return false;
+        LOGGER.debug("TRANSACTION ROLLBACK CHECK - {}", rollbackOnly);
+        if(!isActive()){throw new IllegalStateException("TRANSACTION ROLLBACK CHECK");}
+        return rollbackOnly;
     }
 
     /**
@@ -97,7 +118,9 @@ public class MCROCFLPersistenceTransaction implements MCRPersistenceTransaction 
     @Override
     public boolean isActive() {
         // TODO Auto-generated method stub
-        LOGGER.debug("TRANSACTION ACTIVE CHECK");
+        boolean active = MCRSessionMgr.getCurrentSession().get("classQueue") != null;
+        LOGGER.debug("TRANSACTION ACTIVE CHECK - {}", active);
+        // return active;
         return active;
     }
 
