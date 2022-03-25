@@ -130,19 +130,14 @@ public class MCROCFLDevCommands {
                     new MCRJDOMContent(MCRCategoryTransformer.getMetaDataDocument(category, true)), evt);
                     ((ArrayList<MCREvent>)currentSession.get(classQueue)).add(evt);
             });
-            LOGGER.debug("Finished staging changes...");
-            // list.forEach(cId -> {
-            //     MCREvent evt = new MCREvent(MCREvent.CLASS_TYPE, MCRClassEvent.COMMIT_EVENT);
-            //     MCRCategory category = new MCRCategoryDAOImpl().getCategory(cId, 0);
-            //     evt.put("class", category);
-            //     evt.put("event", evt);
-            //     manager.commitChanges(evt, null);
-            // });
             LOGGER.info("Staged {} Objects for Update in OCFL Store", list.size());
         } catch (Exception e) {
             LOGGER.error("Error occured, rolling back...");
-            MCRTransactionHelper.rollbackTransaction();
-            // MCRTransactionHelper.beginTransaction();
+            try {
+                MCRTransactionHelper.rollbackTransaction();
+            } catch (Exception err) {
+                manager.rollbackSession(MCRSessionMgr.getCurrentSession());
+            }
             list.forEach(cId -> {
                 MCREvent evt = new MCREvent(MCREvent.CLASS_TYPE, MCREvent.CREATE_EVENT);
                 MCRCategory category = new MCRCategoryDAOImpl().getCategory(cId, 0);
