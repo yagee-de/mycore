@@ -116,7 +116,8 @@ public class MCROCFLDevCommands {
         try (Stream<Path> walker = Files.walk(classDir)) {
             walker.sorted(Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
         } catch (Exception e) {
-            throw new IOException(e);
+            // throw new IOException(e);
+            // expected Error incase the directory doesn't exist
         }
         List<MCRCategoryID> list = new MCRCategoryDAOImpl().getRootCategoryIDs();
         try {
