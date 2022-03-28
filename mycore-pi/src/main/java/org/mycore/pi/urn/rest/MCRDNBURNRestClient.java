@@ -18,15 +18,6 @@
 
 package org.mycore.pi.urn.rest;
 
-import static org.apache.http.entity.ContentType.APPLICATION_XML;
-
-import java.net.URL;
-import java.time.Instant;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
-import java.util.Optional;
-import java.util.function.Function;
-
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
@@ -35,6 +26,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mycore.common.config.MCRConfiguration2;
 import org.mycore.pi.MCRPIRegistrationInfo;
+
+import java.net.URL;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+import java.util.Optional;
+import java.util.function.Function;
+
+import static org.apache.http.entity.ContentType.APPLICATION_XML;
 
 /**
  * Created by chi on 25.01.17.
@@ -46,13 +46,13 @@ public class MCRDNBURNRestClient {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private final Function<MCRPIRegistrationInfo, MCREpicurLite> epicurProvider;
+    private final Function<MCRPIRegistrationInfo, MCRURNJsonBundle> jsonProvider;
 
     /**
      * Creates a new operator with the given configuration.
      */
-    public MCRDNBURNRestClient(Function<MCRPIRegistrationInfo, MCREpicurLite> epicurProviderFunc) {
-        this.epicurProvider = epicurProviderFunc;
+    public MCRDNBURNRestClient(Function<MCRPIRegistrationInfo, MCRURNJsonBundle> bundleProvider) {
+        this.jsonProvider = bundleProvider;
     }
 
     protected String getBaseServiceURL(MCRPIRegistrationInfo urn) {
@@ -123,13 +123,12 @@ public class MCRDNBURNRestClient {
      * @return the status code of the request
      */
     private Optional<Date> registerNew(MCRPIRegistrationInfo urn) {
-        MCREpicurLite elp = epicurProvider.apply(urn);
+        MCRURNJsonBundle bundle = jsonProvider.apply(urn);
 
-        String elpXML = elp.asXMLString();
+        String json = bundle.toJSON();
 
         String baseServiceURL = getBaseServiceURL(urn);
-        CloseableHttpResponse response = MCRHttpsClient.post(baseServiceURL, APPLICATION_XML.toString(), elpXML);
-
+        CloseableHttpResponse response = MCRHttpsClient.post(baseServiceURL, APPLICATION_XML.toString(), json);
 
         StatusLine statusLine = response.getStatusLine();
 
@@ -138,11 +137,11 @@ public class MCRDNBURNRestClient {
             return Optional.empty();
         }
 
-        int putStatus = statusLine.getStatusCode();
+        int postStatus = statusLine.getStatusCode();
 
         String identifier = urn.getIdentifier();
-        URL url = elp.getUrl();
-        switch (putStatus) {
+        URL url = bundle.getUrl();
+        switch (postStatus) {
             case HttpStatus.SC_CREATED:
                 LOGGER.info("URN {} registered to {}", identifier, url);
                 return Optional.ofNullable(response.getFirstHeader("Last-Modified"))
@@ -160,9 +159,9 @@ public class MCRDNBURNRestClient {
                 LOGGER.warn("URN {} could NOT registered to {}.", identifier, url);
                 break;
             default:
-                LOGGER.warn("Could not handle urnInfo request: status={}, urn={}, url={}.", putStatus, identifier, url);
-                LOGGER.warn("Epicur Lite:");
-                LOGGER.warn(elpXML);
+                LOGGER.warn("Could not handle urnInfo request: status={}, urn={}, url={}.", postStatus, identifier,
+                    url);
+                LOGGER.warn("JSON:\n" + json);
                 break;
         }
 
@@ -180,10 +179,10 @@ public class MCRDNBURNRestClient {
      */
 
     private Optional<Date> update(MCRPIRegistrationInfo urn) {
-        MCREpicurLite elp = epicurProvider.apply(urn);
-        String elpXML = elp.asXMLString();
+        MCRURNJsonBundle bundle = jsonProvider.apply(urn);
+        String json = bundle.toJSON();
         String updateURL = getUpdateURL(urn);
-        CloseableHttpResponse response = MCRHttpsClient.post(updateURL, APPLICATION_XML.toString(), elpXML);
+        CloseableHttpResponse response = MCRHttpsClient.post(updateURL, APPLICATION_XML.toString(), json);
         StatusLine statusLine = response.getStatusLine();
 
         if (statusLine == null) {
@@ -196,7 +195,7 @@ public class MCRDNBURNRestClient {
         String identifier = urn.getIdentifier();
         switch (postStatus) {
             case HttpStatus.SC_NO_CONTENT:
-                LOGGER.info("URN {} updated to {}.", identifier, elp.getUrl());
+                LOGGER.info("URN {} updated to {}.", identifier, bundle.getUrl());
                 return Optional.ofNullable(response.getFirstHeader("Last-Modified"))
                     .map(Header::getValue)
                     .map(DateTimeFormatter.RFC_1123_DATE_TIME::parse)
@@ -206,7 +205,7 @@ public class MCRDNBURNRestClient {
                 LOGGER.warn("URN {} has a newer version.", identifier);
                 break;
             case HttpStatus.SC_SEE_OTHER:
-                LOGGER.warn("URL {} is registered for another URN.", elp.getUrl());
+                LOGGER.warn("URL {} is registered for another URN.", bundle.getUrl());
                 break;
             default:
                 LOGGER.warn("URN {} could not be updated. Status {}.", identifier, postStatus);

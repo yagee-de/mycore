@@ -18,12 +18,6 @@
 
 package org.mycore.pi.urn.rest;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -44,13 +38,18 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mycore.common.config.MCRConfiguration2;
 
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.function.Supplier;
+
 /**
  * Created by chi on 08.05.17.
  *
  * @author Huu Chi Vu
  */
 public class MCRHttpsClient {
-    private static Logger LOGGER = LogManager.getLogger(MCRHttpsClient.class);
+    final private static Logger LOGGER = LogManager.getLogger(MCRHttpsClient.class);
 
     private static RequestConfig noRedirect() {
         return RequestConfig
@@ -62,8 +61,8 @@ public class MCRHttpsClient {
     public static CloseableHttpClient getHttpsClient() {
         CredentialsProvider provider = new BasicCredentialsProvider();
         UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(MCRConfiguration2
-            .getString("MCR.SIPBuilder.lta.host.username").orElse(""),
-            MCRConfiguration2.getString("MCR.SIPBuilder.lta.host.password").orElse(""));
+            .getString("MCR.PI.DNB.Credentials.Login").orElse("test"),
+            MCRConfiguration2.getString("MCR.PI.DNB.Credentials.Password").orElse("test"));
         provider.setCredentials(AuthScope.ANY, credentials);
 
         int timeout = 5;
