@@ -25,7 +25,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
@@ -33,11 +36,13 @@ import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mycore.common.config.MCRConfiguration2;
 
 /**
  * Created by chi on 08.05.17.
@@ -45,7 +50,7 @@ import org.apache.logging.log4j.Logger;
  * @author Huu Chi Vu
  */
 public class MCRHttpsClient {
-    private static Logger LOGGER = LogManager.getLogger();
+    private static Logger LOGGER = LogManager.getLogger(MCRHttpsClient.class);
 
     private static RequestConfig noRedirect() {
         return RequestConfig
@@ -55,9 +60,21 @@ public class MCRHttpsClient {
     }
 
     public static CloseableHttpClient getHttpsClient() {
+        CredentialsProvider provider = new BasicCredentialsProvider();
+        UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(MCRConfiguration2
+            .getString("MCR.SIPBuilder.lta.host.username").orElse(""),
+            MCRConfiguration2.getString("MCR.SIPBuilder.lta.host.password").orElse(""));
+        provider.setCredentials(AuthScope.ANY, credentials);
+
+        int timeout = 5;
+        RequestConfig config = RequestConfig.custom()
+            .setConnectTimeout(timeout * 1000)
+            .setConnectionRequestTimeout(timeout * 1000)
+            .setSocketTimeout(timeout * 1000).build();
+
         return HttpClientBuilder
-            .create()
-            .setConnectionTimeToLive(1, TimeUnit.MINUTES)
+            .create().setDefaultCredentialsProvider(provider)
+            .setDefaultRequestConfig(config)
             .setSSLContext(SSLContexts.createSystemDefault())
             .build();
     }
@@ -94,7 +111,7 @@ public class MCRHttpsClient {
 
             return httpClient.execute(request);
         } catch (URISyntaxException e) {
-            LOGGER.error("Worng format for URL: {}", url, e);
+            LOGGER.error("Wrong format for URL: {}", url, e);
         } catch (ClientProtocolException e) {
             LOGGER.error("There is a HTTP protocol error for URL: {}", url, e);
         } catch (IOException e) {

@@ -33,6 +33,7 @@ import org.apache.http.StatusLine;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mycore.common.config.MCRConfiguration2;
 import org.mycore.pi.MCRPIRegistrationInfo;
 
 /**
@@ -42,6 +43,7 @@ import org.mycore.pi.MCRPIRegistrationInfo;
  * @author Huu Chi Vu
  */
 public class MCRDNBURNRestClient {
+
     private static final Logger LOGGER = LogManager.getLogger();
 
     private final Function<MCRPIRegistrationInfo, MCREpicurLite> epicurProvider;
@@ -53,8 +55,9 @@ public class MCRDNBURNRestClient {
         this.epicurProvider = epicurProviderFunc;
     }
 
-    private String getBaseServiceURL(MCRPIRegistrationInfo urn) {
-        return "https://restapi.nbn-resolving.org/urns/" + urn.getIdentifier();
+    protected String getBaseServiceURL(MCRPIRegistrationInfo urn) {
+        return MCRConfiguration2.getString("MCR.PI.URNGranular.API.BaseURL")
+            .orElse("https://api.nbn-resolving.org/sandbox/v2/") + "urns/" + urn.getIdentifier();
     }
 
     private String getUpdateURL(MCRPIRegistrationInfo urn) {
@@ -121,9 +124,12 @@ public class MCRDNBURNRestClient {
      */
     private Optional<Date> registerNew(MCRPIRegistrationInfo urn) {
         MCREpicurLite elp = epicurProvider.apply(urn);
+
         String elpXML = elp.asXMLString();
+
         String baseServiceURL = getBaseServiceURL(urn);
-        CloseableHttpResponse response = MCRHttpsClient.put(baseServiceURL, APPLICATION_XML.toString(), elpXML);
+        CloseableHttpResponse response = MCRHttpsClient.post(baseServiceURL, APPLICATION_XML.toString(), elpXML);
+
 
         StatusLine statusLine = response.getStatusLine();
 
