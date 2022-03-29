@@ -32,15 +32,15 @@ public class MCRURNJsonBundle {
 
     public String toJSON() {
         JsonObject json = new JsonObject();
-        json.addProperty("urn", urn.getIdentifier());
+        json.addProperty("urn", this.urn.getIdentifier());
         JsonArray urls = new JsonArray();
         json.add("urls", urls);
 
         JsonObject url = new JsonObject();
-        url.addProperty("url", url.toString());
+        url.addProperty("url", this.url.toString());
         url.addProperty("priority", "1");
         urls.add(url);
 
-        return json.getAsString();
+        return json.toString();
     }
 }
