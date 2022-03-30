@@ -35,7 +35,6 @@ import java.util.Optional;
 import java.util.function.Function;
 
 import static org.apache.http.entity.ContentType.APPLICATION_JSON;
-import static org.apache.http.entity.ContentType.APPLICATION_XML;
 
 /**
  * Created by chi on 25.01.17.
@@ -81,8 +80,14 @@ public class MCRDNBURNRestClient {
         return getBaseServiceURL() + "urn/" + urn.getIdentifier();
     }
 
-    private String getUpdateURL(MCRPIRegistrationInfo urn) {
-        return getBaseServiceURL(urn) + "/links";
+    /**
+     * Returns the url for updating the urls assigned to a given urn.
+     *
+     * @param urn the urn
+     * @return the url for updating the urls
+     * */
+    protected String getUpdateURL(MCRPIRegistrationInfo urn) {
+        return getBaseServiceURL() + "urn/" + urn.getIdentifier() + "/my-urls/";
     }
 
     /**
@@ -145,7 +150,7 @@ public class MCRDNBURNRestClient {
      */
     private Optional<Date> registerNew(MCRPIRegistrationInfo urn) {
         MCRURNJsonBundle bundle = jsonProvider.apply(urn);
-        String json = bundle.toJSON();
+        String json = bundle.toJSON(MCRURNJsonBundle.Mode.register);
         String baseServiceURL = getBaseServiceURL();
         CloseableHttpResponse response = MCRHttpsClient.post(baseServiceURL, APPLICATION_JSON.toString(), json);
 
@@ -202,13 +207,13 @@ public class MCRDNBURNRestClient {
 
     private Optional<Date> update(MCRPIRegistrationInfo urn) {
         MCRURNJsonBundle bundle = jsonProvider.apply(urn);
-        String json = bundle.toJSON();
+        String json = bundle.toJSON(MCRURNJsonBundle.Mode.update);
         String updateURL = getUpdateURL(urn);
-        CloseableHttpResponse response = MCRHttpsClient.post(updateURL, APPLICATION_XML.toString(), json);
+        CloseableHttpResponse response = MCRHttpsClient.patch(updateURL, APPLICATION_JSON.toString(), json);
         StatusLine statusLine = response.getStatusLine();
 
         if (statusLine == null) {
-            LOGGER.warn("POST request for {} returns no status line", updateURL);
+            LOGGER.warn("PATCH request for {} returns no status line", updateURL);
             return Optional.empty();
         }
 

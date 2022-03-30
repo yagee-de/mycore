@@ -35,7 +35,10 @@ import static org.mycore.common.MCRConstants.XSI_NAMESPACE;
  *
  * @author shermann
  * @author Huu Chi Vu
+ *
+ * @deprecated Use {@link MCRURNJsonBundle}
  */
+@Deprecated
 public final class MCREpicurLite {
     private final MCRPIRegistrationInfo urn;
 

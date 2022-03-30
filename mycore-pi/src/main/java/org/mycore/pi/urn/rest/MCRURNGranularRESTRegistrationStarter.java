@@ -99,6 +99,10 @@ public class MCRURNGranularRESTRegistrationStarter
             timeUnit);
     }
 
+    /**
+     * @deprecated Use {@link MCRURNGranularRESTRegistrationStarter#getBundleProvider()}
+     * */
+    @Deprecated
     public Function<MCRPIRegistrationInfo, MCREpicurLite> getEpicureProvider(UsernamePasswordCredentials credentials) {
         return urn -> MCREpicurLite.instance(urn, MCRDerivateURNUtils.getURL(urn))
             .setCredentials(credentials);
@@ -108,6 +112,10 @@ public class MCRURNGranularRESTRegistrationStarter
         return urn -> MCRURNJsonBundle.instance(urn, MCRDerivateURNUtils.getURL(urn));
     }
 
+    /**
+     * @deprecated Reading of properties moved to {@link MCRHttpsClient#getHttpsClient()}
+     * */
+    @Deprecated
     public Optional<UsernamePasswordCredentials> getUsernamePassword() {
         String username = MCRConfiguration2.getString("MCR.PI.DNB.Credentials.Login").orElse(null);
         String password = MCRConfiguration2.getString("MCR.PI.DNB.Credentials.Password").orElse(null);
