@@ -27,6 +27,7 @@ import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpHead;
+import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
@@ -95,6 +96,10 @@ public class MCRHttpsClient {
 
     public static CloseableHttpResponse post(String url, String contentType, String data) {
         return request(HttpPost::new, url, contentType, new StringEntity(data, "UTF-8"));
+    }
+
+    public static CloseableHttpResponse patch(String url, String contentType, String data) {
+        return request(HttpPatch::new, url, contentType, new StringEntity(data, "UTF-8"));
     }
 
     public static <R extends HttpEntityEnclosingRequestBase> CloseableHttpResponse request(
