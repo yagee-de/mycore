@@ -37,11 +37,11 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mycore.common.config.MCRConfiguration2;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -60,26 +60,32 @@ public class MCRHttpsClient {
     }
 
     public static CloseableHttpClient getHttpsClient() {
-        CredentialsProvider provider = new BasicCredentialsProvider();
-        UsernamePasswordCredentials credentials = new UsernamePasswordCredentials(MCRConfiguration2
-            .getString("MCR.PI.DNB.Credentials.Login").orElse("test"),
-            MCRConfiguration2.getString("MCR.PI.DNB.Credentials.Password").orElse("test"));
-        provider.setCredentials(AuthScope.ANY, credentials);
+        return getHttpsClient(Optional.empty());
+    }
 
+    /**
+     * @param credentials
+     * */
+    public static CloseableHttpClient getHttpsClient(Optional<UsernamePasswordCredentials> credentials) {
+        HttpClientBuilder clientBuilder = HttpClientBuilder.create();
+        if (credentials.isPresent()) {
+            CredentialsProvider provider = new BasicCredentialsProvider();
+            provider.setCredentials(AuthScope.ANY, credentials.get());
+            clientBuilder.setDefaultCredentialsProvider(provider);
+        }
         int timeout = 5;
         RequestConfig config = RequestConfig.custom()
-            .setConnectTimeout(timeout * 1000)
-            .setConnectionRequestTimeout(timeout * 1000)
+            .setConnectTimeout(timeout * 1000).setConnectionRequestTimeout(timeout * 1000)
             .setSocketTimeout(timeout * 1000).build();
 
-        return HttpClientBuilder
-            .create().setDefaultCredentialsProvider(provider)
-            .setDefaultRequestConfig(config)
-            .setSSLContext(SSLContexts.createSystemDefault())
-            .build();
+        return clientBuilder.setDefaultRequestConfig(config).setSSLContext(SSLContexts.createSystemDefault()).build();
     }
 
     public static CloseableHttpResponse head(String url) {
+        return MCRHttpsClient.head(url, Optional.empty());
+    }
+
+    public static CloseableHttpResponse head(String url, Optional<UsernamePasswordCredentials> credentials) {
         HttpHead httpHead = new HttpHead(url);
         try (CloseableHttpClient httpClient = getHttpsClient()) {
             return httpClient.execute(httpHead);
@@ -91,22 +97,41 @@ public class MCRHttpsClient {
     }
 
     public static CloseableHttpResponse put(String url, String contentType, String data) {
-        return request(HttpPut::new, url, contentType, new StringEntity(data, "UTF-8"));
+        return MCRHttpsClient.put(url, contentType, data, Optional.empty());
+    }
+
+    public static CloseableHttpResponse put(String url, String contentType, String data,
+        Optional<UsernamePasswordCredentials> credentials) {
+        return request(HttpPut::new, url, contentType, new StringEntity(data, "UTF-8"), credentials);
     }
 
     public static CloseableHttpResponse post(String url, String contentType, String data) {
-        return request(HttpPost::new, url, contentType, new StringEntity(data, "UTF-8"));
+        return MCRHttpsClient.post(url, contentType, data, Optional.empty());
+    }
+
+    public static CloseableHttpResponse post(String url, String contentType, String data,
+        Optional<UsernamePasswordCredentials> credentials) {
+        return request(HttpPost::new, url, contentType, new StringEntity(data, "UTF-8"), credentials);
     }
 
     public static CloseableHttpResponse patch(String url, String contentType, String data) {
-        return request(HttpPatch::new, url, contentType, new StringEntity(data, "UTF-8"));
+        return MCRHttpsClient.patch(url, contentType, data, Optional.empty());
     }
 
-    public static <R extends HttpEntityEnclosingRequestBase> CloseableHttpResponse request(
-        Supplier<R> requestSupp, String url,
-        String contentType, HttpEntity entity) {
+    public static CloseableHttpResponse patch(String url, String contentType, String data,
+        Optional<UsernamePasswordCredentials> credentials) {
+        return request(HttpPatch::new, url, contentType, new StringEntity(data, "UTF-8"), credentials);
+    }
 
-        try (CloseableHttpClient httpClient = getHttpsClient()) {
+    public static <R extends HttpEntityEnclosingRequestBase> CloseableHttpResponse request(Supplier<R> requestSupp,
+        String url, String contentType, HttpEntity entity) {
+        return MCRHttpsClient.request(requestSupp, url, contentType, entity, Optional.empty());
+    }
+
+    public static <R extends HttpEntityEnclosingRequestBase> CloseableHttpResponse request(Supplier<R> requestSupp,
+        String url, String contentType, HttpEntity entity, Optional<UsernamePasswordCredentials> credentials) {
+
+        try (CloseableHttpClient httpClient = getHttpsClient(credentials)) {
             R request = requestSupp.get();
             request.setURI(new URI(url));
             request.setHeader("content-type", contentType);

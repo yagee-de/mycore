@@ -15,7 +15,7 @@ import java.net.URL;
  * */
 public class MCRURNJsonBundle {
 
-    protected enum Mode {
+    protected enum Format {
         register, update
     }
 
@@ -37,14 +37,14 @@ public class MCRURNJsonBundle {
     }
 
     /**
-     * Returns the proper JSON with respect to the given {@link Mode}
+     * Returns the proper JSON with respect to the given {@link Format}
      *
-     * @param mode one of {@link Mode}
+     * @param format one of {@link Format}
      *
      * @return JSON
      * */
-    public String toJSON(Mode mode) {
-        return mode.equals(Mode.register) ? getRegisterJson() : getUpdateJson();
+    public String toJSON(Format format) {
+        return format.equals(Format.register) ? getRegisterJson() : getUpdateJson();
     }
 
     /**

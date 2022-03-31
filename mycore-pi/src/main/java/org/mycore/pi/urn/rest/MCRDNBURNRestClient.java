@@ -21,6 +21,7 @@ package org.mycore.pi.urn.rest;
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
+import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -39,8 +40,8 @@ import static org.apache.http.entity.ContentType.APPLICATION_JSON;
 /**
  * Created by chi on 25.01.17.
  *
- * @author shermann
  * @author Huu Chi Vu
+ * @author shermann
  */
 public class MCRDNBURNRestClient {
 
@@ -48,11 +49,25 @@ public class MCRDNBURNRestClient {
 
     private final Function<MCRPIRegistrationInfo, MCRURNJsonBundle> jsonProvider;
 
+    private final Optional<UsernamePasswordCredentials> credentials;
+
     /**
      * Creates a new operator with the given configuration.
+     *
+     * @param bundleProvider
      */
     public MCRDNBURNRestClient(Function<MCRPIRegistrationInfo, MCRURNJsonBundle> bundleProvider) {
+        this(bundleProvider, Optional.empty());
+    }
+
+    /**
+     * @param bundleProvider
+     * @param credentials
+     * */
+    public MCRDNBURNRestClient(Function<MCRPIRegistrationInfo, MCRURNJsonBundle> bundleProvider,
+        Optional<UsernamePasswordCredentials> credentials) {
         this.jsonProvider = bundleProvider;
+        this.credentials = credentials;
     }
 
     @Deprecated
@@ -150,9 +165,10 @@ public class MCRDNBURNRestClient {
      */
     private Optional<Date> registerNew(MCRPIRegistrationInfo urn) {
         MCRURNJsonBundle bundle = jsonProvider.apply(urn);
-        String json = bundle.toJSON(MCRURNJsonBundle.Mode.register);
+        String json = bundle.toJSON(MCRURNJsonBundle.Format.register);
         String baseServiceURL = getBaseServiceURL();
-        CloseableHttpResponse response = MCRHttpsClient.post(baseServiceURL, APPLICATION_JSON.toString(), json);
+        CloseableHttpResponse response = MCRHttpsClient.post(baseServiceURL, APPLICATION_JSON.toString(), json,
+            credentials);
 
         StatusLine statusLine = response.getStatusLine();
 
@@ -207,9 +223,10 @@ public class MCRDNBURNRestClient {
 
     private Optional<Date> update(MCRPIRegistrationInfo urn) {
         MCRURNJsonBundle bundle = jsonProvider.apply(urn);
-        String json = bundle.toJSON(MCRURNJsonBundle.Mode.update);
+        String json = bundle.toJSON(MCRURNJsonBundle.Format.update);
         String updateURL = getUpdateURL(urn);
-        CloseableHttpResponse response = MCRHttpsClient.patch(updateURL, APPLICATION_JSON.toString(), json);
+        CloseableHttpResponse response = MCRHttpsClient.patch(updateURL, APPLICATION_JSON.toString(), json,
+            credentials);
         StatusLine statusLine = response.getStatusLine();
 
         if (statusLine == null) {
