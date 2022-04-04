@@ -18,20 +18,22 @@
 
 package org.mycore.pi.urn.rest;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.http.HttpEntity;
-import org.apache.http.auth.AuthScope;
+import org.apache.http.HttpHeaders;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.ClientProtocolException;
-import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpHead;
 import org.apache.http.client.methods.HttpPatch;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.ssl.SSLContexts;
@@ -41,6 +43,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.function.Supplier;
 
@@ -59,20 +62,10 @@ public class MCRHttpsClient {
             .build();
     }
 
-    public static CloseableHttpClient getHttpsClient() {
-        return getHttpsClient(Optional.empty());
-    }
-
     /**
-     * @param credentials
-     * */
-    public static CloseableHttpClient getHttpsClient(Optional<UsernamePasswordCredentials> credentials) {
+     **/
+    public static CloseableHttpClient getHttpsClient() {
         HttpClientBuilder clientBuilder = HttpClientBuilder.create();
-        if (credentials.isPresent()) {
-            CredentialsProvider provider = new BasicCredentialsProvider();
-            provider.setCredentials(AuthScope.ANY, credentials.get());
-            clientBuilder.setDefaultCredentialsProvider(provider);
-        }
         int timeout = 5;
         RequestConfig config = RequestConfig.custom()
             .setConnectTimeout(timeout * 1000).setConnectionRequestTimeout(timeout * 1000)
@@ -91,6 +84,21 @@ public class MCRHttpsClient {
             return httpClient.execute(httpHead);
         } catch (IOException e) {
             LOGGER.error("There is a problem or the connection was aborted for URL: {}", url, e);
+        }
+
+        return null;
+    }
+
+    public static HttpResponse get(String url, Optional<UsernamePasswordCredentials> credentials) {
+        HttpGet get = new HttpGet(url);
+
+        if (credentials.isPresent()) {
+            setAuthorizationHeader(get, credentials);
+        }
+        try (CloseableHttpClient httpsClient = getHttpsClient()) {
+            return httpsClient.execute(get);
+        } catch (IOException e) {
+            LOGGER.error(e);
         }
 
         return null;
@@ -128,11 +136,25 @@ public class MCRHttpsClient {
         return MCRHttpsClient.request(requestSupp, url, contentType, entity, Optional.empty());
     }
 
+    private static HttpRequest setAuthorizationHeader(HttpRequest request,
+        Optional<UsernamePasswordCredentials> credentials) {
+
+        String auth = credentials.get().getUserName() + ":" + credentials.get().getPassword();
+        byte[] encodedAuth = Base64.encodeBase64(auth.getBytes(StandardCharsets.ISO_8859_1));
+        String authHeader = "Basic " + new String(encodedAuth);
+        request.setHeader(HttpHeaders.AUTHORIZATION, authHeader);
+        return request;
+    }
+
     public static <R extends HttpEntityEnclosingRequestBase> CloseableHttpResponse request(Supplier<R> requestSupp,
         String url, String contentType, HttpEntity entity, Optional<UsernamePasswordCredentials> credentials) {
 
-        try (CloseableHttpClient httpClient = getHttpsClient(credentials)) {
+        try (CloseableHttpClient httpClient = getHttpsClient()) {
             R request = requestSupp.get();
+
+            if (credentials.isPresent()) {
+                setAuthorizationHeader(request, credentials);
+            }
             request.setURI(new URI(url));
             request.setHeader("content-type", contentType);
             request.setConfig(noRedirect());

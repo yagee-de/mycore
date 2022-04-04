@@ -19,6 +19,7 @@
 package org.mycore.pi.urn.rest;
 
 import org.apache.http.Header;
+import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.StatusLine;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -92,7 +93,7 @@ public class MCRDNBURNRestClient {
      * @return the request url
      * */
     protected String getBaseServiceCheckExistsURL(MCRPIRegistrationInfo urn) {
-        return getBaseServiceURL() + "urn/" + urn.getIdentifier();
+        return getUpdateURL(urn);
     }
 
     /**
@@ -118,12 +119,12 @@ public class MCRDNBURNRestClient {
      */
     public Optional<Date> register(MCRPIRegistrationInfo urn) {
         String url = getBaseServiceCheckExistsURL(urn);
-        CloseableHttpResponse response = MCRHttpsClient.head(url);
+        HttpResponse response = MCRHttpsClient.get(url, credentials);
 
         StatusLine statusLine = response.getStatusLine();
 
         if (statusLine == null) {
-            LOGGER.warn("HEAD request for {} returns no status line.", url);
+            LOGGER.warn("GET request for {} returns no status line.", url);
             return Optional.empty();
         }
 
@@ -238,7 +239,7 @@ public class MCRDNBURNRestClient {
 
         String identifier = urn.getIdentifier();
         switch (patchStatus) {
-            case HttpStatus.SC_OK:
+            case HttpStatus.SC_NO_CONTENT:
                 LOGGER.info("URN {} updated to {}", identifier, bundle.getUrl());
                 return Optional.ofNullable(response.getFirstHeader("Last-Modified"))
                     .map(Header::getValue)
