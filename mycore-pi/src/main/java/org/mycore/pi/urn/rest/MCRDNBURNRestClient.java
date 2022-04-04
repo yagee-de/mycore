@@ -185,7 +185,7 @@ public class MCRDNBURNRestClient {
         switch (postStatus) {
             case HttpStatus.SC_CREATED:
                 LOGGER.info("URN {} registered to {}", identifier, url);
-                return Optional.ofNullable(response.getFirstHeader("Last-Modified"))
+                return Optional.ofNullable(response.getFirstHeader("date"))
                     .map(Header::getValue)
                     .map(DateTimeFormatter.RFC_1123_DATE_TIME::parse)
                     .map(Instant::from)
@@ -241,7 +241,7 @@ public class MCRDNBURNRestClient {
         switch (patchStatus) {
             case HttpStatus.SC_NO_CONTENT:
                 LOGGER.info("URN {} updated to {}", identifier, bundle.getUrl());
-                return Optional.ofNullable(response.getFirstHeader("Last-Modified"))
+                return Optional.ofNullable(response.getFirstHeader("date"))
                     .map(Header::getValue)
                     .map(DateTimeFormatter.RFC_1123_DATE_TIME::parse)
                     .map(Instant::from)
