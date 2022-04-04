@@ -131,7 +131,7 @@ public class MCRDNBURNRestClient {
 
         String identifier = urn.getIdentifier();
         switch (headStatus) {
-            case HttpStatus.SC_NO_CONTENT:
+            case HttpStatus.SC_OK:
                 LOGGER.info("URN {} is in database. No further information asked", identifier);
                 LOGGER.info("Performing update of url");
                 return update(urn);
@@ -200,7 +200,7 @@ public class MCRDNBURNRestClient {
                 LOGGER.warn("URN {} could NOT registered to {}", identifier, url);
                 break;
             case HttpStatus.SC_FORBIDDEN:
-                LOGGER.warn("URN {} record cannot be registered with provided credentials", identifier);
+                LOGGER.error("URN {} record cannot be registered with provided credentials", identifier);
                 break;
             default:
                 LOGGER.warn("Could not handle urn info request: status={}, urn={}, url={} json={}", postStatus,
@@ -234,11 +234,11 @@ public class MCRDNBURNRestClient {
             return Optional.empty();
         }
 
-        int postStatus = statusLine.getStatusCode();
+        int patchStatus = statusLine.getStatusCode();
 
         String identifier = urn.getIdentifier();
-        switch (postStatus) {
-            case HttpStatus.SC_NO_CONTENT:
+        switch (patchStatus) {
+            case HttpStatus.SC_OK:
                 LOGGER.info("URN {} updated to {}", identifier, bundle.getUrl());
                 return Optional.ofNullable(response.getFirstHeader("Last-Modified"))
                     .map(Header::getValue)
@@ -252,7 +252,7 @@ public class MCRDNBURNRestClient {
                 LOGGER.warn("URL {} is registered for another URN", bundle.getUrl());
                 break;
             default:
-                LOGGER.warn("URN {} could not be updated. Status {}", identifier, postStatus);
+                LOGGER.error("URN {} could not be updated. Status {}", identifier, patchStatus);
                 break;
         }
 
