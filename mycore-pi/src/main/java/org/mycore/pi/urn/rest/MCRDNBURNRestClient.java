@@ -18,6 +18,8 @@
 
 package org.mycore.pi.urn.rest;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
@@ -29,6 +31,9 @@ import org.apache.logging.log4j.Logger;
 import org.mycore.common.config.MCRConfiguration2;
 import org.mycore.pi.MCRPIRegistrationInfo;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.net.URL;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
@@ -190,23 +195,16 @@ public class MCRDNBURNRestClient {
                     .map(DateTimeFormatter.RFC_1123_DATE_TIME::parse)
                     .map(Instant::from)
                     .map(Date::from);
-            case HttpStatus.SC_SEE_OTHER:
-                LOGGER.warn(
-                    "At least one of the given URLs is already registered under another URN, " +
-                        "which means you should use this existing URN instead of assigning a new one");
-                LOGGER.warn("URN {} could NOT registered to {}", identifier, url);
-                break;
-            case HttpStatus.SC_CONFLICT:
-                LOGGER.warn("URN-Record already exists and will not be created again");
-                LOGGER.warn("URN {} could NOT registered to {}", identifier, url);
-                break;
-            case HttpStatus.SC_FORBIDDEN:
-                LOGGER.error("URN {} record cannot be registered with provided credentials", identifier);
-                break;
             default:
-                LOGGER.warn("Could not handle urn info request: status={}, urn={}, url={} json={}", postStatus,
-                    identifier, url, json);
-                break;
+                try (Reader reader = new InputStreamReader(response.getEntity().getContent())) {
+                    JsonElement jsonElement = JsonParser.parseReader(reader);
+                    LOGGER.error("{}: {} ({})", postStatus,
+                        jsonElement.getAsJsonObject().get("developerMessage"), identifier);
+                } catch (IOException e) {
+                    LOGGER.error(
+                        "Could not handle urn post request: status={}, " +
+                            "urn={}, url={} json={}", postStatus, identifier, url, json);
+                }
         }
 
         return Optional.empty();
