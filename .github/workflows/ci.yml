@@ -10,6 +10,7 @@ jobs:
     uses: yagee-de/gh-workflows/.github/workflows/maven-verify.yml@main
     with:
       ff-site-goal: ''
+      ff-goal: '-P run-its verify'
       failure-upload-path: |
           ./**/surefire-reports
           ./**/failsafe-reports
