@@ -9,7 +9,15 @@ jobs:
     name: Verify
     uses: yagee-de/gh-workflows/.github/workflows/maven-verify.yml@main
     with:
+      ff-site-goal: ''
+      failure-upload-path: |
+          ./**/surefire-reports
+          ./**/failsafe-reports
+          ./**/screenshots
+          ./**/*error*.log
+          ./**/*test.log
       matrix-exclude: >
         [
+          {"os": "macOS-latest"},
           {"jdk": "8"}
         ]

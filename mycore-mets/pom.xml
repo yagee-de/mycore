@@ -129,7 +129,7 @@
   </dependencies>
   <profiles>
     <profile>
-      <id>local-testing</id>
+      <id>run-its</id>
       <build>
         <plugins>
           <plugin>
